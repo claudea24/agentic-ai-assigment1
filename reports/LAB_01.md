@@ -99,6 +99,148 @@ prompts (at most 2,199 tokens) were too short to be cached; a test with a
    you believed, and which trace shows why it was wrong.
 7. The seven-layer audit: how many layers are empty (`ARCHITECTURE.md`).
 
+**Answer:**
+
+**1. The diamond.** In all three ways nobody approves anything. The comment goes
+straight to the tracker, so none of them is a chatbot or a copilot. What changes
+from one way to the next is who decides what happens next, and who decides the
+run is over.
+
+With the direct call, it's just a script. My code reads the issue, asks the
+model once and posts the comment. There's no next step to choose, and my code
+ends it (all 60 runs `completed`). The model only writes the label and the file.
+
+The workflow is still my code's call. I fixed the order myself: read the issue,
+get search terms, search, choose, post. The model fills in two of those steps,
+the search terms and the label and file, but it never picks what comes next, and
+my code ends it (all 60 `completed`). I also cap it at three searches.
+
+The agent is where the model takes over. It picks the next tool each time and
+posts the comment itself. It decides when to stop too, and it did in 44 of the
+60 runs (`model_stopped`). In the other 16 my code had to cut it off at the
+`turn_limit`, and none of those 16 passed.
+
+So the agent really has two diamonds. The limits in `agent/loop.py` (steps,
+tokens and time) are checked by my code before every call, so my code decides
+the latest point a run can end. Inside those limits, the model decides what to
+call and when it's done.
+
+**2. My multipliers.** Over 60 runs each, the agent used 6,633 tokens per run
+(6,506 prompt plus 127 output) and the direct call used 1,156 (1,144 plus 12).
+That makes the agent **5.74×** the direct call. The lecture says about 4×
+(slide 30, Anthropic-reported, one team on its own workload, 2025), so mine is
+higher. Two things are different about my measurement:
+
+- *The thing I divide by.* My baseline is a single call with no tools, one short
+  prompt and a 12-token answer, which is about as cheap as a call can be. A
+  smaller baseline makes the ratio bigger. I don't know what "chat
+  interactions" means for the lecture's figure, so I can't say how much of the
+  gap this explains.
+- *The workload and the model.* Mine is one small task on one cheap model, with
+  a hard limit of 10 steps. The agent's runs were pulled in both directions by
+  that: 16 of 60 kept searching until they hit the limit, which pushes the
+  average up, while the other 44 stopped after only a few calls. The lecture's
+  number comes from one team's own work, which could be longer or shorter than
+  this.
+
+For cost, the agent's mean is $0.00227 per run and the workflow's is $0.00034,
+so **m = 6.71**. That is higher than the 5.74 token ratio because output tokens
+cost more than input tokens (2.50 against 0.30 dollars per million), and the
+agent writes about 127 output tokens a run against the workflow's 16.
+
+**3. Where the agent earns it.** The workflow solved fewer than five of ten runs
+on four issues, and the agent did better on only one of them, 4203 (10 of 10
+against 3). So **f = 1/6 = 0.17**. With c = $0.00034 and m = 6.71, the blended
+cost is c × [(1 − f) + f × m] = **$0.00066** a run. That is about twice the
+workflow alone ($0.00034) and under a third of sending everything to the agent
+($0.00227).
+
+I use the workflow as c here, not the slide's "one plain call", because the
+workflow is what I'd ship if the agent lost.
+
+The slide's version uses the direct call as c: c = $0.00037, m = 6.08 and
+**f = 0**, because the agent never beats the direct call on an issue. The
+blended cost is then just $0.00037. The agent costs $0.0019 more per run and
+passes 8 fewer runs out of 60 (29 against 37, about 0.13 fewer per run), so
+there are no extra correct triages to put a price on.
+
+Gate 4 should use the direct-call version. The direct call beat the workflow
+(37 against 23 passes) for about the same cost, so it is what I would ship
+instead of the agent.
+
+**4. Path entropy.** The agent's 60 runs used **9 distinct tool sequences**, and
+the three most common cover 38 runs, **63%**. Every sequence has the same shape:
+`read_issue`, then `search_repo` some number of times, then `post_comment` (or
+no post at all). The model never picked a different tool or a different order.
+The only thing that changed was how many times it searched.
+
+So the part that isn't earning its cost is the choosing of tools: a workflow
+could write that order down. What the agent does add is searching again. That
+paid off on 4203, where it searched three times and passed 10 of 10 (the
+workflow passed 3 of 10). But 20 of the 60 runs searched five times or more and
+none of them passed. Those 20 runs cost $0.078 of the agent's $0.136 total, 58%
+of the money, and they averaged $0.0039 a run against $0.0014 for the other 40.
+
+**5. The four gates.**
+
+- **Does the task vary from case to case?** Only a little. The label and file
+  differ by issue, but all 60 agent runs followed the same shape, read, search,
+  post. What varied was how many searches it took to find the file, from one to
+  nine.
+- **Can I limit the damage of a mistake?** Yes. The worst a run can do is post
+  one wrong comment, and the loop stops it at 10 steps, a worst case of 11,425
+  prompt tokens.
+- **Will I catch it in time?** Partly. A wrong comment can be deleted, but
+  nothing here checks it as it is posted. In the agent's runs 31 of 60 failed,
+  and 16 of those posted nothing at all, so nobody would have been told.
+- **Is it worth the multiplier?** No. The agent costs 6.7 times the workflow
+  and 5.7 times the direct call in tokens, and it passed fewer runs than the
+  direct call (29 against 37).
+
+**Verdict:** to be decided after the hybrid (Part D).
+
+**6. My missed predictions.** All three pass counts missed, and for the same
+reason: I expected more structure and more freedom to help, and I underestimated
+how much the repo summary already gave the direct call.
+
+- **Direct: I said about 25, it got 37.** I thought it would only get the issues
+  where the summary points clearly to a file, and I underrated how many that was.
+  The summary lists the file for most issues: `src/exportUtils.ts` for 4202 and
+  `src/ingest/parser.ts` for 4203, and the direct call posted those 10 of 10
+  times (`direct-4202-s01-7d5934`). Its two zeros were 4204 and 4206, so I did
+  name 4204 as the hardest, but it tied with 4206.
+- **Workflow: I said about 40, it got 23.** I thought real search hits would
+  beat guessing from a summary. Instead the search led it astray. On 4203 the
+  quoted "Malformed row" text appears only in `src/i18n/en.json`, the translation
+  file, so the workflow found no parser and my own "say file: none rather than
+  guessing" rule made it post `none` in 6 of 10 runs (`workflow-4203-s01-976c36`).
+  4204 went the same way: its searches for "summary", "email" and "timezone"
+  never reached the right file, and it posted `none` in 9 of 10 runs
+  (`workflow-4204-s01-787bc4`). On 4202 its search for "tsv" returned nothing, so
+  it posted the folder `src/export/` (`workflow-4202-s01-26b9b3`). I was right
+  that 4204 was hard, but three issues tied at zero.
+- **Agent: I said about 50, it got 29.** I thought being able to search again
+  would rescue it on the ambiguous issues, and I overrated that. It worked on
+  4203: after the "Malformed row" hit in the translation file it searched
+  `errors.rowShape` and then `parser.ts` and got 10 of 10 (`agent-4203-s01-6b42c6`).
+  On 4202, 4204 and 4206 it went 0 of 10. I also expected it to stop too early on
+  a plausible file, and the opposite happened: 16 of 60 runs never stopped and hit
+  the turn limit. I did call 4206 right. The issue names `src/export/csv.ts`
+  itself, and 6 runs posted it, but the bug is in `src/ingest/dedupe.ts`. In one
+  run it searched for csv seven times before posting that file
+  (`agent-4206-s01-475063`).
+
+**7. The seven-layer audit.** Zero of the seven layers are empty (full table with
+file and line references in `ARCHITECTURE.md`). Model, tools and observability
+are present. Harness, memory and state, control and policy, and evaluation are
+partial: nothing trims the history, nothing survives past one run, nothing
+checks a second post or asks a person first, and the evaluation only runs before
+release. The slide expects four missing from a first build. Mine is better on
+observability and evaluation, which exist in code, but memory and state and
+control and policy are only partial, so they are the nearest to what the slide
+expects. The one policy that is really empty is "post only one comment", because
+only the prompt holds it.
+
 ## Part D · The hybrid
 Your hand-off rule, and the Part B traces that led you to it (written before you
 measure). Its row beside the three ways (the same columns as Part B's table), how many of

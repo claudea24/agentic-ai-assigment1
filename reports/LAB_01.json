@@ -87,27 +87,27 @@
       "max_tool_calls": 10
     },
     "hybrid": {
-      "runs": null,
-      "passes": null,
+      "runs": 60,
+      "passes": 26,
       "per_issue": {
-        "4201": null,
-        "4202": null,
-        "4203": null,
-        "4204": null,
-        "4205": null,
-        "4206": null
+        "4201": 10,
+        "4202": 0,
+        "4203": 6,
+        "4204": 0,
+        "4205": 10,
+        "4206": 0
       },
-      "sweep_min": null,
-      "sweep_max": null,
-      "all_ten": null,
-      "mean_prompt_tokens": null,
-      "mean_output_tokens": null,
-      "mean_cached_tokens": null,
-      "p50_latency_s": null,
-      "p95_latency_s": null,
-      "mean_cost_usd": null,
-      "mean_tool_calls": null,
-      "max_tool_calls": null
+      "sweep_min": 2,
+      "sweep_max": 3,
+      "all_ten": 2,
+      "mean_prompt_tokens": 4394.6,
+      "mean_output_tokens": 78.18333333333334,
+      "mean_cached_tokens": 0.0,
+      "p50_latency_s": 1.421,
+      "p95_latency_s": 7.969,
+      "mean_cost_usd": 0.0015138383333333334,
+      "mean_tool_calls": 7.416666666666667,
+      "max_tool_calls": 14
     }
   },
   "analysis": {
@@ -121,7 +121,7 @@
       "distinct_sequences": 9,
       "top3_share": 0.6333333333333333
     },
-    "verdict": null,
-    "hybrid_handoffs": null
+    "verdict": "workflow",
+    "hybrid_handoffs": 24
   }
 }

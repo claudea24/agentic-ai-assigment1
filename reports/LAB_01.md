@@ -197,18 +197,36 @@ of the money, and they averaged $0.0039 a run against $0.0014 for the other 40.
   and 5.7 times the direct call in tokens, and it passed fewer runs than the
   direct call (29 against 37).
 
-**Verdict:** to be decided after the hybrid (Part D).
+**Verdict: workflow.** The agent fails gate 4, and gate 1 only partly supports it: the task barely varies
+(every run followed read, search, post), and for 6.7 times the workflow's cost it
+passed only 6 more runs out of 60. The hybrid did not fix that (see Part D). The
+workflow is cheap ($0.00034 a run), has a fixed length (at most 5 tool calls) and
+ends on its own, and its failures traced back to two choices I could change in
+code: a search that hit the translation file, and my "say none" rule. The
+direct call scored higher here, but only because of the repo summary; see Part D.
 
-**6. My missed predictions.** All three pass counts missed, and for the same
-reason: I expected more structure and more freedom to help, and I underestimated
-how much the repo summary already gave the direct call.
+**6. My missed predictions.** All three pass counts missed. I expected more
+structure and more freedom to help, and the opposite happened: the plain direct
+call came out best (37), ahead of the agent (29) and the workflow (23). I think
+that says more about this test than about the designs. The direct call gets the
+repo summary, a short hand-written map of the code that names the right file for
+four of the five file issues (4201, 4202, 4203 and 4206), so it was handed most
+of the answers. That is why it won, and I would not call it a fair winner. It
+never checks anything: on 4204 and 4206 it was confidently wrong in 10 of 10
+runs, and nothing in its run could have told it so. It also only works while the
+whole repo fits in a short summary (this one has 61 files). I'd treat it as a
+useful baseline, not a design I'd trust on a larger codebase.
 
-- **Direct: I said about 25, it got 37.** I thought it would only get the issues
-  where the summary points clearly to a file, and I underrated how many that was.
-  The summary lists the file for most issues: `src/exportUtils.ts` for 4202 and
-  `src/ingest/parser.ts` for 4203, and the direct call posted those 10 of 10
-  times (`direct-4202-s01-7d5934`). Its two zeros were 4204 and 4206, so I did
-  name 4204 as the hardest, but it tied with 4206.
+- **Direct: I said about 25, it got 37.** I thought it could only name a file
+  when the summary points to it clearly, and I underrated how often it does:
+  `src/exportUtils.ts` for 4202 and `src/ingest/parser.ts` for 4203 were posted 10
+  of 10 times (`direct-4202-s01-7d5934`). I also expected it to lose points on
+  exact file names, after the capital-letter slip in my dev run, and that did not
+  come back: its wrong answers were other files, like `email.ts` and `auth.ts` on
+  4201. Its two zeros were 4204 and 4206, so I named 4204 as the hardest right,
+  but it tied with 4206. On 4204 the summary only lists the folder `src/util/`,
+  so it guessed `src/notifications/rollup.ts`. On 4206 it trusted the file the
+  issue names.
 - **Workflow: I said about 40, it got 23.** I thought real search hits would
   beat guessing from a summary. Instead the search led it astray. On 4203 the
   quoted "Malformed row" text appears only in `src/i18n/en.json`, the translation
@@ -225,9 +243,10 @@ how much the repo summary already gave the direct call.
   `errors.rowShape` and then `parser.ts` and got 10 of 10 (`agent-4203-s01-6b42c6`).
   On 4202, 4204 and 4206 it went 0 of 10. I also expected it to stop too early on
   a plausible file, and the opposite happened: 16 of 60 runs never stopped and hit
-  the turn limit. I did call 4206 right. The issue names `src/export/csv.ts`
-  itself, and 6 runs posted it, but the bug is in `src/ingest/dedupe.ts`. In one
-  run it searched for csv seven times before posting that file
+  the turn limit. I named 4206 as the hardest, and it was, but it tied with 4202
+  and 4204 at zero. The issue names `src/export/csv.ts` itself, and 6 runs posted
+  it, but the bug is in `src/ingest/dedupe.ts`. In one run it made seven searches,
+  nearly all on csv and export, before posting that file
   (`agent-4206-s01-475063`).
 
 **7. The seven-layer audit.** Zero of the seven layers are empty (full table with
@@ -249,6 +268,98 @@ blended cost from Part C, item 3. Does it change your Part C verdict? Which of
 the four would you ship, and why?
 
 **Answer:**
+
+**The hand-off rule (written before measuring).** The hybrid runs the workflow
+first. If the workflow's label is not `question` and its file is `none`, it
+does not post, and hands the issue to the agent instead. Otherwise it posts the
+workflow's answer. The rule only uses the workflow's own answer, never the
+known answers or the issue numbers.
+
+**The traces behind it.** The workflow's usual failure was posting `file: none`
+for something that wasn't a question. On 4203 it did so in 6 of 10 runs, after
+its search only found the translation file (`workflow-4203-s01-976c36`), and on
+4204 in 9 of 10 runs (`workflow-4204-s01-787bc4`). Its correct runs look
+different: on 4201 it named a file (`workflow-4201-s01-4548a9`), and on 4205,
+which is a question, `none` is the right answer (`workflow-4205-s01-5d4a83`). I
+tried three rules from the handout on the workflow's 60 runs (23 passed, 37
+failed), re-running each run's searches offline:
+
+| Rule | Fires on passing runs | Fires on failing runs |
+|---|---|---|
+| Every search returned "No matches." | 0 of 23 | 1 of 37 |
+| The chosen file is in none of the search results | 3 of 23 | 4 of 37 |
+| No file for something that isn't a question | 0 of 23 | 26 of 37 |
+
+The third rule never fires on a correct run and catches most failures, so that
+is the one I chose. It fires on 4202 (3 runs), 4203 (6), 4204 (9) and 4206 (8).
+I also tried adding "the file is a folder", which caught 4 more failures, but
+all on 4202 where the agent had passed 0 of 10, so it would only add cost. The
+agent only clearly earns its cost on 4203, and the rule cannot tell that issue
+from the others, because it only sees the workflow's answer.
+
+I chose the rule from the same six issues I measure it on, so its result will be
+optimistic.
+
+**Results, beside the three ways** (60 runs each, no `make reset` before the
+hybrid runs).
+
+| | Direct | Workflow | Agent | Hybrid |
+|---|---|---|---|---|
+| Passes (of 60) | 37 | 23 | 29 | 26 |
+| 4201 (of 10) | 7 | 10 | 10 | 10 |
+| 4202 | 10 | 0 | 0 | 0 |
+| 4203 | 10 | 3 | 10 | 6 |
+| 4204 | 0 | 0 | 0 | 0 |
+| 4205 | 10 | 10 | 9 | 10 |
+| 4206 | 0 | 0 | 0 | 0 |
+| Lowest / highest sweep (of 6) | 3 / 4 | 2 / 3 | 2 / 3 | 2 / 3 |
+| Issues solved in all 10 runs | 3 | 2 | 2 | 2 |
+| Mean prompt tokens per run | 1,144 | 995 | 6,506 | 4,395 |
+| Mean output tokens per run | 12 | 16 | 127 | 78 |
+| Mean cached tokens per run | 0 | 0 | 0 | 0 |
+| p50 latency | 0.73 s | 2.60 s | 19.5 s | 1.42 s |
+| p95 latency | 2.1 s | 47.4 s | 72.8 s | 8.0 s |
+| Mean cost per run | $0.00037 | $0.00034 | $0.00227 | $0.00151 |
+| Tool calls, mean (max) | 2.0 (2) | 4.8 (5) | 5.9 (10) | 7.4 (14) |
+
+**Hand-offs.** 24 of the 60 runs were handed to the agent (15 ended
+`model_stopped` and 9 `turn_limit`); the other 36 stayed in the workflow and
+ended `completed`. By issue: 4203 five times, 4204 nine times and 4206 ten
+times, and never on 4201, 4202 or 4205. Only the 5 on 4203 landed where Part C
+found the agent earns its cost: the agent passed all five. The other 19 went to
+4204 and 4206, where the agent also passes 0 of 10, so they cost money and
+bought nothing. On 4203 the other 5 runs stayed in the workflow, and 4 of them
+failed by posting `src/api/uploads.ts` instead of `none`, a confident wrong
+file, which my rule cannot see. That is
+why the hybrid got 6 of 10 there and not 10.
+
+**Cost against the blend.** The hybrid cost $0.00151 a run, against the
+$0.00066 blended cost from Part C, item 3. The blend assumed I could hand off
+only the one issue in six where the agent helps (about 10 runs of 60). The real
+rule handed off 24, because it fires on every issue where the workflow answers
+`none`, and most of those are issues the agent cannot solve either. A handed-off
+run costs $0.00326 on average (the workflow's part plus the agent's), against
+$0.00035 for a run that stayed, and the handed-off runs make up 86% of the
+hybrid's total cost.
+
+**Does it change my Part C verdict?** No. The hybrid passed 3 more runs than the
+workflow (26 against 23) for 4.5 times the cost, which is about $0.023 for each
+extra correct triage. The agent got 6 more passes for about $0.019 each, so
+the hybrid was not even a cheaper way to buy the agent's gains. The rule only
+sees the workflow's own answer, so it handed off the issues where the workflow
+said `none` and missed the ones where it was confidently wrong. I chose the rule
+from the same six issues I measured it on, so a fresh set of issues would
+probably do worse. My verdict stays workflow.
+
+**Which of the four would I ship?** On these numbers the direct call is the best
+of the four: 37 passes at $0.00037 a run. But it won because the repo summary
+names the file for most issues, and it never checks anything. It was confidently
+wrong on 4204 and 4206 in 10 of 10 runs, and no rule could catch that, so it
+only works while a whole repo fits in a short summary. Today, on this 61-file
+repo, I would ship the direct call, because it is the cheapest way to get the
+most correct triages. If the repo grew past what a summary can hold, I would
+ship the workflow and fix its two weak points, the search terms and the "say
+none" rule, before touching an agent.
 
 
 ## Assistance

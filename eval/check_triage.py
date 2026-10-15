@@ -17,5 +17,15 @@ the course checker read comments the same way.
 """
 
 
+from harness.formats import normalize_path, parse_triage_comment
+
+
 def check(tracker, run_id: str, issue_number: int, answer: dict) -> bool:
-    raise NotImplementedError("Assignment 1 Part B: the grounded check")
+    # Only comments stamped with this run's id, on this issue. The harness stamps the id,
+    # so nothing the model says can make an earlier run's comment count here.
+    comments = tracker.comments(run_id=run_id, issue=issue_number)
+    if len(comments) != 1:  # none means no triage was posted; two means the run was not clean
+        return False
+    label, file = parse_triage_comment(comments[0]["body"])
+    return (label == str(answer["label"]).strip().lower()
+            and file == (normalize_path(answer.get("file")) or "none"))

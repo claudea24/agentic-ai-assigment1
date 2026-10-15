@@ -8,6 +8,7 @@ any vendor figure you cite with its source type and date.
 Model calls, tool calls, prompt tokens and the cached share, first and last
 prompt size, cumulative over first. One sentence on what the growth means.
 
+**Answer:**
 The recording has 21 model calls and 23 tool calls, and 399,123 prompt tokens
 in all, of which 388,338 (0.973) were cache reads. The first call's prompt was
 13,445 tokens and the last call's was 24,188, so cumulative prompt tokens were
@@ -22,6 +23,7 @@ grows faster than the step count and a step limit is a money limit.
 Your three bounds and why. Your worst case: *F*, *A*, *N*, and the cumulative
 prompt tokens at your turn limit.
 
+**Answer:**
 The loop (`agent/loop.py`) checks all three bounds in code before every model
 call and calls `trace.end` exactly once. The values are in `agent/bounds.yaml`:
 
@@ -35,7 +37,7 @@ call and calls `trace.end` exactly once. The values are in `agent/bounds.yaml`:
 prompt about 350, the three tool definitions about 190, the first message about
 15, plus vendor overhead). *A* ≈ 400 tokens added per step (a tool call of about
 40 plus a result of up to about 350 for `search_repo`). With *N* = 10, the
-cumulative prompt tokens at the limit are N·F + A·N(N−1)/2 = 6,000 + 18,000 =
+`cumulative_prompt_tokens` at the limit are N·F + A·N(N−1)/2 = 6,000 + 18,000 =
 **24,000**. After Part B this estimate is replaced by values measured on the 60
 evaluation agent runs.
 
@@ -47,6 +49,8 @@ bind, because it sits above the worst case.
 The table for all three ways: passes out of 60, per issue out of 10, the spread
 (lowest and highest sweep), issues solved in every run, tokens, p50 and p95
 latency, cost, tool calls.
+
+**Answer:**
 
 ## Part C · The decision
 1. Find the diamond, for each way.
@@ -67,5 +71,11 @@ its runs handed the issue to the agent, and its measured cost per run beside you
 blended cost from Part C, item 3. Does it change your Part C verdict? Which of
 the four would you ship, and why?
 
+**Answer:**
+
+
 ## Assistance
 Which AI tool, what it wrote, what you checked.
+
+**Answer:**
+I used Claude Code as a coding assistant. It helped me write the python code inside eval, agent, and the ways folder based on my approval and directions. I checked its code by running make test, make bounds-smoke, make check-01, and manual testing / checking with terminal. 

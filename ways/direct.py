@@ -12,6 +12,17 @@ calls a tool and traces it in one go; its step is the model call it belongs to,
 Keep your prompt in prompts/ and load it with ctx.prompt("direct.md").
 """
 
+from harness.formats import LABELS, format_triage_comment, parse_triage_comment
+
 
 def run(ctx) -> None:
-    raise NotImplementedError("Assignment 1 Part B: the direct call")
+    issue = ctx.call_tool(0, "read_issue", {"number": ctx.issue_number})
+    message = f"Repository summary:\n\n{ctx.repo_summary}\n\nIssue to triage:\n\n{issue.content}"
+    response = ctx.client.create(system=ctx.prompt("direct.md"),
+                                 messages=[{"role": "user", "content": message}])
+    ctx.trace.model_call(1, response)
+    label, file = parse_triage_comment(response.text)
+    if label not in LABELS:
+        return  # nothing usable to post; with no comment the run fails the check, which is honest
+    ctx.call_tool(1, "post_comment", {"number": ctx.issue_number,
+                                      "body": format_triage_comment(label, file)})

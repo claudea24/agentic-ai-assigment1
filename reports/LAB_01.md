@@ -41,6 +41,14 @@ prompt about 350, the three tool definitions about 190, the first message about
 **24,000**. After Part B this estimate is replaced by values measured on the 60
 evaluation agent runs.
 
+**Worst case, measured on the 60 evaluation agent runs.** *F* = 526 (the mean
+`prompt_tokens` of the first call) and *A* ≈ 137 (the mean increase in
+`prompt_tokens` from one call to the next, rounded). With *N* = 10 this gives
+N·F + A·N(N−1)/2 = 5,260 + 6,165 = **11,425** (`worst_case` in
+`LAB_01.json`). The estimate was too high, mostly in *A* (400 against 137),
+because the tool results were shorter than the 350 tokens I allowed for. Both
+are far below the 40,000 token bound, so the step limit still binds first.
+
 `make bounds-smoke` (the scripted never-stopping model, free): both dev issues
 made exactly 10 model calls and ended on `turn_limit`. The token budget did not
 bind, because it sits above the worst case.
@@ -51,6 +59,33 @@ The table for all three ways: passes out of 60, per issue out of 10, the spread
 latency, cost, tool calls.
 
 **Answer:**
+Each way ran the six evaluation issues ten times (60 runs) on `gemini-3.5-flash-lite`.
+Success is decided by `eval/check_triage.py`: exactly one comment on the issue
+with the run's id, and its label and file both match the answer.
+
+| | Direct | Workflow | Agent |
+|---|---|---|---|
+| Passes (of 60) | 37 | 23 | 29 |
+| 4201 (of 10) | 7 | 10 | 10 |
+| 4202 | 10 | 0 | 0 |
+| 4203 | 10 | 3 | 10 |
+| 4204 | 0 | 0 | 0 |
+| 4205 | 10 | 10 | 9 |
+| 4206 | 0 | 0 | 0 |
+| Lowest / highest sweep (of 6) | 3 / 4 | 2 / 3 | 2 / 3 |
+| Issues solved in all 10 runs | 3 | 2 | 2 |
+| Mean prompt tokens per run | 1,144 | 995 | 6,506 |
+| Mean output tokens per run | 12 | 16 | 127 |
+| Mean cached tokens per run | 0 | 0 | 0 |
+| p50 latency | 0.73 s | 2.60 s | 19.5 s |
+| p95 latency | 2.1 s | 47.4 s | 72.8 s |
+| Mean cost per run | $0.00037 | $0.00034 | $0.00227 |
+| Tool calls, mean (max) | 2.0 (2) | 4.8 (5) | 5.9 (10) |
+
+Cached tokens were 0 on every call for all three ways, so the prompt tokens
+above are all uncached. Gemini caches repeated prompts automatically, but these
+prompts (at most 2,199 tokens) were too short to be cached; a test with a
+5,505-token prompt showed 3,468 cached tokens on the repeat. Costs are priced from `pricing.yaml` (read 2026-10-14).
 
 ## Part C · The decision
 1. Find the diamond, for each way.

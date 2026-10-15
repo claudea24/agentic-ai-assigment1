@@ -5,6 +5,6 @@
 # max_tokens must sit below the harness ceiling in settings.yaml
 # (session_token_ceiling), so that your loop, not the harness, ends the run.
 
-max_steps: 0        # why:
-max_tokens: 0       # why:
-wall_clock_s: 0     # why:
+max_steps: 10         # why: the task needs about 5 to 7 calls (read, 2 or 3 searches, post); 10 leaves headroom without letting a looping model run on
+max_tokens: 40000     # why: above the 24,000-token worst case at 10 steps (F=600, A=400), so steps bind first; far below the 400,000 harness ceiling
+wall_clock_s: 180     # why: 10 calls at 2 to 4 s is about 40 s; the rest covers free-tier rate-limit waits, which count toward latency

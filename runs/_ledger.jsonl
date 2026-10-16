@@ -266,3 +266,5 @@
 {"run_id": "hybrid-4204-s10-201d92", "way": "hybrid", "issue": 4204, "sweep": 10, "backend": "openai-compatible", "total_tokens": 11391, "cost_usd": 0.00382, "error": null, "finished": "2026-10-15T04:12:29"}
 {"run_id": "hybrid-4205-s10-449094", "way": "hybrid", "issue": 4205, "sweep": 10, "backend": "openai-compatible", "total_tokens": 1314, "cost_usd": 0.000421, "error": null, "finished": "2026-10-15T04:12:30"}
 {"run_id": "hybrid-4206-s10-0bea9a", "way": "hybrid", "issue": 4206, "sweep": 10, "backend": "openai-compatible", "total_tokens": 13062, "cost_usd": 0.004367, "error": null, "finished": "2026-10-15T04:12:38"}
+{"run_id": "agent-4191-s01-1c6043", "way": "agent", "issue": 4191, "sweep": 1, "backend": "never-stops", "total_tokens": 11500, "cost_usd": 0.0, "error": null, "finished": "2026-10-15T22:14:55"}
+{"run_id": "agent-4192-s01-b59f36", "way": "agent", "issue": 4192, "sweep": 1, "backend": "never-stops", "total_tokens": 11500, "cost_usd": 0.0, "error": null, "finished": "2026-10-15T22:14:55"}

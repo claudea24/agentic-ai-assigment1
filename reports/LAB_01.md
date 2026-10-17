@@ -366,4 +366,4 @@ none" rule, before touching an agent.
 Which AI tool, what it wrote, what you checked.
 
 **Answer:**
-I used Claude Code as a coding assistant. It helped me write the python code inside eval, agent, and the ways folder based on my approval and directions. I checked its code by running make test, make bounds-smoke, make check-01, and manual testing / checking with terminal. 
+I used Claude Code (Claude Sonnet 5.5) as a coding assistant. It helped me write the python code inside eval, agent, and the ways folder based on my approval and directions. I checked its code by running make test, make bounds-smoke, make check-01, and manual testing / checking with terminal. 
